@@ -9,7 +9,7 @@ void BtnOkClick()
 
 void BtnCancelClick()
 {
-	MessageBox(0,_T("Cancel"),_T(";)"),0);
+    MessageBox(0,_T("Cancel"),_T(";)"),0);
 }
 
 int main()
