@@ -169,7 +169,7 @@ void Engage(void)
 
 /* Helper functions */
 /* Takes HWND of button and returns corresponding WNDPROC */
-WNDPROC FindBtnDefCallBack(HWND btnHwnd, Button buttons[])
+WNDPROC FindBtnDefaultCallBack(HWND btnHwnd, Button buttons[])
 {
     for(int i=0;i<buttonsCount;i++)
     {
