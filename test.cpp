@@ -9,6 +9,7 @@ HWND formhwnd = nullptr;
 HWND btnhwnd = nullptr;
 HWND textboxhwnd = nullptr;
 HWND checkboxhwnd = nullptr;
+HWND btntogglecheckhwnd = nullptr;
 
 void checkandmsg()
 {
@@ -26,6 +27,13 @@ void textchanged()
 	MessageBox(0, GetTextboxText(textboxhwnd), _T("You typed"), MB_ICONINFORMATION);
 }
 
+void togglechecked()
+{
+	if (GetCheckboxState(checkboxhwnd) == CHECKBOXSTATE_CHECKED)
+		SetCheckboxState(checkboxhwnd, CHECKBOXSTATE_UNCHECKED);
+	else if (GetCheckboxState(checkboxhwnd) == CHECKBOXSTATE_UNCHECKED)
+		SetCheckboxState(checkboxhwnd, CHECKBOXSTATE_CHECKED);
+}
 
 int CALLBACK WinMain(
 	_In_ HINSTANCE hInstance,
@@ -45,9 +53,12 @@ int CALLBACK WinMain(
 			AddTextboxEvent(textboxhwnd, TEXTBOXEVENT_TEXTCHANGE, &textchanged);
 		}
 		checkboxhwnd = AddCheckbox(formhwnd, _T("Checkbox1"), 50, 350, 70, 30);
-		if (checkboxhwnd)
-		{
+		if (checkboxhwnd){
 			AddCheckboxEvent(checkboxhwnd, CHECKBOXEVENT_STATECHANGE, &checkandmsg);
+		}
+		btntogglecheckhwnd = AddButton(formhwnd, _T("Toggle Checkbox"), 50, 380, 100, 30);
+		if (btntogglecheckhwnd) {
+			AddButtonEvent(btntogglecheckhwnd, BUTTONEVENT_LCLICK, &togglechecked);
 		}
 		Engage();
 	}
