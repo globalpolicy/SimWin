@@ -88,6 +88,7 @@ LRESULT CALLBACK CheckboxProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 HWND AddCheckbox(HWND parentFormhwnd, const TCHAR *checkText, int x, int y, int width, int height);
 bool AddCheckboxEvent(HWND checkboxHwnd, CheckboxEventsEnum textboxEvent, void(*Procedure)());
 CheckboxStatesEnum GetCheckboxState(HWND checkboxHwnd);
+void SetCheckboxState(HWND checkboxHwnd, CheckboxStatesEnum state);
 #pragma endregion
 
 
@@ -395,7 +396,21 @@ CheckboxStatesEnum GetCheckboxState(HWND checkboxHwnd)
 	}
 }
 
-
+void SetCheckboxState(HWND checkboxHwnd, CheckboxStatesEnum state)
+{
+	switch (state)
+	{
+	case CHECKBOXSTATE_CHECKED:
+		SendMessage(checkboxHwnd, BM_SETCHECK, BST_CHECKED, NULL);
+		break;
+	case CHECKBOXSTATE_UNCHECKED:
+		SendMessage(checkboxHwnd, BM_SETCHECK, BST_UNCHECKED, NULL);
+		break;
+	case CHECKBOXSTATE_INDETERMINATE:
+		SendMessage(checkboxHwnd, BM_SETCHECK, BST_INDETERMINATE, NULL);
+		break;
+	}
+}
 #pragma endregion
 
 #pragma endregion
