@@ -59,8 +59,41 @@ bool AddTextboxEvent(HWND textboxHwnd, TextboxEventsEnum textboxEvent, void(*Pro
 LPTSTR GetTextboxText(HWND textboxHwnd);
 #pragma endregion
 
+#pragma region Checkbox Declarations
+#define MAX_CHECKBOXES 50
+int checkboxesCount = 0;
+typedef enum
+{
+	CHECKBOXEVENT_STATECHANGE
+} CheckboxEventsEnum;
+typedef enum
+{
+	CHECKBOXSTATE_CHECKED,
+	CHECKBOXSTATE_UNCHECKED,
+	CHECKBOXSTATE_INDETERMINATE
+} CheckboxStatesEnum;
+typedef struct
+{
+	void(*event_proc) ();
+} CheckboxEvent;
+typedef struct
+{
+	WNDPROC CheckboxDefaultCallback;
+	HWND CheckboxHwnd;
+	CheckboxEvent STATECHANGE;
+} Checkbox;
+Checkbox Checkboxes[MAX_CHECKBOXES];
+WNDPROC FindCheckboxDefaultCallBack(HWND checkboxHwnd, Checkbox checkboxes[]);
+LRESULT CALLBACK CheckboxProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam);
+HWND AddCheckbox(HWND parentFormhwnd, const TCHAR *checkText, int x, int y, int width, int height);
+bool AddCheckboxEvent(HWND checkboxHwnd, CheckboxEventsEnum textboxEvent, void(*Procedure)());
+CheckboxStatesEnum GetCheckboxState(HWND checkboxHwnd);
+#pragma endregion
+
+
 #pragma region Miscellaneous Declarations
 bool SetNiceFont(HWND hwnd);
+bool StartThread(void(*Procedure)());
 #pragma endregion
 
 #pragma endregion
@@ -228,7 +261,7 @@ LRESULT CALLBACK TextboxProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 			if (textbox.TextboxHwnd == hwnd)
 			{
 				if (textbox.TEXTCHANGE.event_proc)
-					(*textbox.TEXTCHANGE.event_proc) ();
+					StartThread(textbox.TEXTCHANGE.event_proc);
 			}
 		}
 	}
@@ -245,8 +278,8 @@ HWND AddTextbox(HWND parentFormhwnd, const TCHAR *defText, int x, int y, int wid
 		WS_TABSTOP | WS_VISIBLE | WS_CHILD | WS_BORDER | WS_EX_CLIENTEDGE | (multiline ? ES_MULTILINE : 0x0L) | (horscroll ? WS_HSCROLL : 0x0L) | (verscroll ? WS_VSCROLL : 0x0L),  // Styles 
 		x,         // x position 
 		y,         // y position 
-		width,        // Button width
-		height,        // Button height
+		width,        // Textbox width
+		height,        // Textbox height
 		parentFormhwnd,     // Parent window
 		NULL,       // No menu.
 		(HINSTANCE)GetWindowLongPtr(parentFormhwnd, GWLP_HINSTANCE),
@@ -286,6 +319,85 @@ LPTSTR GetTextboxText(HWND textboxHwnd)
 }
 #pragma endregion
 
+#pragma region Definitions related to Checkboxes
+/*Callback for checkbox*/
+LRESULT CALLBACK CheckboxProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam)
+{
+	switch (Msg)
+	{
+		// Handle all messages we want to customize:
+	case WM_LBUTTONUP:
+		for (int i = 0; i<checkboxesCount; i++)
+		{
+			Checkbox checkbox = Checkboxes[i];
+			if (checkbox.CheckboxHwnd == hwnd)
+			{
+				if (checkbox.STATECHANGE.event_proc)
+					StartThread(checkbox.STATECHANGE.event_proc);
+			}
+		}
+	}
+	WNDPROC CheckboxDefaultCallBack = nullptr;
+	CheckboxDefaultCallBack = FindCheckboxDefaultCallBack(hwnd, Checkboxes);
+	return CallWindowProc(CheckboxDefaultCallBack, hwnd, Msg, wParam, lParam);
+}
+
+HWND AddCheckbox(HWND parentFormhwnd, const TCHAR *checkText, int x, int y, int width, int height)
+{
+	HWND checkboxHwnd = CreateWindow(
+		_T("BUTTON"),  // Predefined class 
+		checkText,      // Checkbox text 
+		BS_AUTOCHECKBOX | WS_TABSTOP | WS_VISIBLE | WS_CHILD ,  // Styles 
+		x,         // x position 
+		y,         // y position 
+		width,        // Button width
+		height,        // Button height
+		parentFormhwnd,     // Parent window
+		NULL,       // No menu.
+		(HINSTANCE)GetWindowLongPtr(parentFormhwnd, GWLP_HINSTANCE),
+		NULL);      // Pointer not needed.
+
+	SetNiceFont(checkboxHwnd);
+	Checkboxes[checkboxesCount] = { (WNDPROC)GetWindowLongPtr(checkboxHwnd, GWLP_WNDPROC), checkboxHwnd, NULL };
+	LONG_PTR retval = SetWindowLongPtr(checkboxHwnd, GWLP_WNDPROC, (LONG_PTR)&CheckboxProc);
+	checkboxesCount++;
+	return checkboxHwnd;
+}
+
+bool AddCheckboxEvent(HWND checkboxHwnd, CheckboxEventsEnum checkboxEvent, void(*Procedure)())
+{
+	for (int i = 0; i<checkboxesCount; i++)
+	{
+		Checkbox checkbox = Checkboxes[i];
+		if (checkboxHwnd == checkbox.CheckboxHwnd)
+		{
+			switch (checkboxEvent)
+			{
+			case CHECKBOXEVENT_STATECHANGE:
+				Checkboxes[i].STATECHANGE.event_proc = Procedure;
+				return true;
+			}
+		}
+	}
+}
+
+CheckboxStatesEnum GetCheckboxState(HWND checkboxHwnd)
+{
+	UINT checkState = SendMessage(checkboxHwnd, BM_GETCHECK, NULL, NULL);
+	switch (checkState)
+	{
+	case BST_CHECKED:
+		return CHECKBOXSTATE_CHECKED;
+	case BST_UNCHECKED:
+		return CHECKBOXSTATE_UNCHECKED;
+	default:
+		return CHECKBOXSTATE_INDETERMINATE;
+	}
+}
+
+
+#pragma endregion
+
 #pragma endregion
 
 
@@ -312,10 +424,42 @@ WNDPROC FindTextboxDefaultCallBack(HWND textboxHwnd, Textbox textboxes[])
 		}
 	}
 }
+/* Takes HWND of checkbox and returns coresponding WNDPROC */
+WNDPROC FindCheckboxDefaultCallBack(HWND checkboxHwnd, Checkbox checkboxes[])
+{
+	for (int i = 0; i<checkboxesCount; i++)
+	{
+		if (checkboxes[i].CheckboxHwnd == checkboxHwnd)
+		{
+			return checkboxes[i].CheckboxDefaultCallback;
+		}
+	}
+}
 /* Sets 'nice' font to the given hwnd */
 bool SetNiceFont(HWND hwnd)
 {
 	//use 'regular' system GUI font instead of the ugly default 'universal' one
 	return SendMessage(hwnd, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), true);
 }
+
+#pragma region Thread functions for creating a new thread
+void DelayAndRunProc(void(*Procedure)())	// Only to be called by StartThread() function
+{
+	Sleep(10);
+	LPSECURITY_ATTRIBUTES sec = (LPSECURITY_ATTRIBUTES)malloc(sizeof(SECURITY_ATTRIBUTES));
+	sec->nLength = sizeof(SECURITY_ATTRIBUTES);
+	sec->lpSecurityDescriptor = NULL;
+	sec->bInheritHandle = NULL;
+	CreateThread(sec, NULL, (LPTHREAD_START_ROUTINE)Procedure, nullptr, NULL, NULL);
+}
+/* Starts a new thread */
+bool StartThread(void(*Procedure)())
+{
+	LPSECURITY_ATTRIBUTES sec = (LPSECURITY_ATTRIBUTES)malloc(sizeof(SECURITY_ATTRIBUTES));
+	sec->nLength = sizeof(SECURITY_ATTRIBUTES);
+	sec->lpSecurityDescriptor = NULL;
+	sec->bInheritHandle = NULL;
+	return CreateThread(sec, NULL, (LPTHREAD_START_ROUTINE)&DelayAndRunProc, Procedure, NULL, NULL);
+}
+#pragma endregion
 #pragma endregion
