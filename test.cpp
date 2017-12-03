@@ -8,16 +8,24 @@ processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 HWND formhwnd = nullptr;
 HWND btnhwnd = nullptr;
 HWND textboxhwnd = nullptr;
+HWND checkboxhwnd = nullptr;
 
-void clicked()
+void checkandmsg()
 {
-	MessageBox(0, _T("Clicked!"), _T(":D"), 0);
+	if(GetCheckboxState(checkboxhwnd) == CHECKBOXSTATE_CHECKED)
+		MessageBox(0, _T("Checked!"), _T(":D"), 0);
+	else if(GetCheckboxState(checkboxhwnd) == CHECKBOXSTATE_UNCHECKED)
+		MessageBox(0, _T("Unchecked!"), _T(":("), 0);
+	else
+		MessageBox(0, _T("Indeterminate!"), _T(":|"), 0);
+
 }
 
 void textchanged()
 {
 	MessageBox(0, GetTextboxText(textboxhwnd), _T("You typed"), MB_ICONINFORMATION);
 }
+
 
 int CALLBACK WinMain(
 	_In_ HINSTANCE hInstance,
@@ -30,13 +38,19 @@ int CALLBACK WinMain(
 	if (formhwnd) {
 		btnhwnd = AddButton(formhwnd, _T("Ok"), 50, 100, 80, 30);
 		if (btnhwnd) {
-			AddButtonEvent(btnhwnd, BUTTONEVENT_LCLICK, &clicked);
+			AddButtonEvent(btnhwnd, BUTTONEVENT_LCLICK, &checkandmsg);
 		}
 		textboxhwnd = AddTextbox(formhwnd, _T("Default text"), 50, 200, 200, 150, false, true, true);
 		if (textboxhwnd) {
 			AddTextboxEvent(textboxhwnd, TEXTBOXEVENT_TEXTCHANGE, &textchanged);
 		}
+		checkboxhwnd = AddCheckbox(formhwnd, _T("Checkbox1"), 50, 350, 70, 30);
+		if (checkboxhwnd)
+		{
+			AddCheckboxEvent(checkboxhwnd, CHECKBOXEVENT_STATECHANGE, &checkandmsg);
+		}
 		Engage();
 	}
 
 }
+
