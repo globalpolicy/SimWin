@@ -5,8 +5,37 @@
 #pragma region Declarations
 
 #pragma region Form Declarations
+#define MAX_FORMS 50
+int formsCount = 0;
+typedef enum
+{
+	FORMEVENT_RESIZE,
+	FORMEVENT_MINIMIZED,
+	FORMEVENT_MAXIMIZED
+} FormEventsEnum;
+typedef struct
+{
+	void(*event_proc) ();
+} FormEvent;
+typedef struct
+{
+	WNDPROC FormDefaultCallback;
+	HWND FormHwnd;
+	FormEvent RESIZE;
+	FormEvent MINIMIZED;
+	FormEvent MAXIMIZED;
+} Form;
+typedef struct
+{
+	LONG Width;
+	LONG Height;
+} FormSize;
+Form Forms[MAX_FORMS];
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 HWND CreateForm(const TCHAR *formTitle, const TCHAR *className, int width, int height);
+bool AddFormEvent(HWND formHwnd, FormEventsEnum formEvent, void(*Procedure) ());
+FormSize GetFormSize(HWND formHwnd);
+bool SetFormSize(HWND formHwnd, FormSize toSet);
 void Engage(void);
 #pragma endregion
 
@@ -57,6 +86,7 @@ LRESULT CALLBACK TextboxProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam);
 HWND AddTextbox(HWND parentFormhwnd, const TCHAR *defText, int x, int y, int width, int height, bool horscroll, bool verscroll, bool multiline);
 bool AddTextboxEvent(HWND textboxHwnd, TextboxEventsEnum textboxEvent, void(*Procedure)());
 LPTSTR GetTextboxText(HWND textboxHwnd);
+bool SetTextboxText(HWND textboxHwnd, TCHAR *text);
 #pragma endregion
 
 #pragma region Checkbox Declarations
@@ -111,7 +141,36 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	case WM_DESTROY:
 		PostQuitMessage(0);       /* send a WM_QUIT to the message queue */
 		break;
-	case WM_COMMAND:
+	case WM_SIZING:
+		for (int i = 0; i<formsCount; i++)
+		{
+			Form form = Forms[i];
+			if (form.FormHwnd == hwnd)
+			{
+				if (form.RESIZE.event_proc) 
+					(*form.RESIZE.event_proc) ();	
+			}
+		}
+		break;
+	case WM_SIZE:
+		for (int i = 0; i<formsCount; i++)
+		{
+			Form form = Forms[i];
+			if (form.FormHwnd == hwnd)
+			{
+				if (wParam == SIZE_MINIMIZED)
+				{
+					if (form.MINIMIZED.event_proc)
+						(*form.MINIMIZED.event_proc) ();
+				}
+				else if (wParam == SIZE_MAXIMIZED)
+				{
+					if (form.MAXIMIZED.event_proc)
+						(*form.MAXIMIZED.event_proc) ();
+				}
+			}
+		}
+		break;
 
 	default:                      /* for messages that we don't deal with */
 		return DefWindowProc(hwnd, message, wParam, lParam);
@@ -163,9 +222,51 @@ HWND CreateForm(const TCHAR *formTitle, const TCHAR *className, int width, int h
 			NULL                 /* No Window Creation data */
 		);
 
+		Forms[formsCount] = { WindowProcedure, hwnd, NULL, NULL };
+		formsCount++;
 		ShowWindow(hwnd, SW_NORMAL);
 		return hwnd;
 	}
+}
+
+bool AddFormEvent(HWND formHwnd, FormEventsEnum formEvent, void(*Procedure) ())
+{
+	for (int i = 0; i<formsCount; i++)
+	{
+		Form form = Forms[i];
+		if (formHwnd == form.FormHwnd)
+		{
+			switch (formEvent)
+			{
+			case FORMEVENT_RESIZE:
+				Forms[i].RESIZE.event_proc = Procedure;
+				return true;
+			case FORMEVENT_MINIMIZED:
+				Forms[i].MINIMIZED.event_proc = Procedure;
+				return true;
+			case FORMEVENT_MAXIMIZED:
+				Forms[i].MAXIMIZED.event_proc = Procedure;
+				return true;
+			}
+		}
+	}
+}
+
+FormSize GetFormSize(HWND formHwnd)
+{
+	RECT *rect = (RECT*)malloc(sizeof(RECT));
+	FormSize formsize = { 0,0 };
+	if (GetWindowRect(formHwnd, rect))
+	{
+		formsize.Height = rect->bottom - rect->top;
+		formsize.Width = rect->right - rect->left;
+	}
+	return formsize;
+}
+
+bool SetFormSize(HWND formHwnd, FormSize toSet)
+{
+	return SetWindowPos(formHwnd, NULL, NULL, NULL, toSet.Width, toSet.Height, SWP_NOMOVE);
 }
 
 /* Message loop for main window */
@@ -317,6 +418,11 @@ LPTSTR GetTextboxText(HWND textboxHwnd)
 	text = (TCHAR*) calloc(textlength, sizeof(TCHAR));
 	GetWindowText(textboxHwnd, text, textlength+1);
 	return text;
+}
+
+bool SetTextboxText(HWND textboxHwnd, TCHAR *text)
+{
+	return SendMessage(textboxHwnd, WM_SETTEXT, NULL, (LPARAM)text);
 }
 #pragma endregion
 

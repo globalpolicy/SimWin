@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "simwin.h"
+#include <stdio.h>
 
 #pragma comment(linker,"\"/manifestdependency:type='win32' \
 name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
@@ -10,6 +11,9 @@ HWND btnhwnd = nullptr;
 HWND textboxhwnd = nullptr;
 HWND checkboxhwnd = nullptr;
 HWND btntogglecheckhwnd = nullptr;
+HWND form2hwnd = nullptr;
+HWND form2btnhwnd = nullptr;
+HWND form2textboxhwnd = nullptr;
 
 void checkandmsg()
 {
@@ -33,6 +37,40 @@ void togglechecked()
 		SetCheckboxState(checkboxhwnd, CHECKBOXSTATE_UNCHECKED);
 	else if (GetCheckboxState(checkboxhwnd) == CHECKBOXSTATE_UNCHECKED)
 		SetCheckboxState(checkboxhwnd, CHECKBOXSTATE_CHECKED);
+}
+
+void form2minimized()
+{
+	MessageBox(0, _T("Minimized!"), _T("Info"), 0);
+}
+
+void form2resized()
+{
+	FormSize formsize = GetFormSize(form2hwnd);
+	TCHAR showthis[50];
+	swprintf_s(showthis, 30, _T("Height = %d\r\nWidth = %d"), formsize.Height, formsize.Width);
+	SetTextboxText(form2textboxhwnd, showthis);
+}
+
+void form2maximized()
+{
+	long textboxlength = wcslen(GetTextboxText(form2textboxhwnd));
+	TCHAR *showthis = (TCHAR*)calloc(textboxlength + 20, sizeof(TCHAR));
+	swprintf_s(showthis, textboxlength + 20, _T("%s\r\n%s"), GetTextboxText(form2textboxhwnd), _T("Maximized!"));
+	SetTextboxText(form2textboxhwnd, showthis);
+}
+
+void onclickform2btn()
+{
+	if (GetFormSize(form2hwnd).Height > 550)
+	{
+		SetFormSize(form2hwnd, { 300,550 });
+	}
+	else
+	{
+		SetFormSize(form2hwnd, { 400,600 });
+	}
+
 }
 
 int CALLBACK WinMain(
@@ -60,8 +98,25 @@ int CALLBACK WinMain(
 		if (btntogglecheckhwnd) {
 			AddButtonEvent(btntogglecheckhwnd, BUTTONEVENT_LCLICK, &togglechecked);
 		}
-		Engage();
 	}
+	form2hwnd = CreateForm(_T("Another title"), _T("SimwinForm2"), 500, 550);
+	if (form2hwnd)
+	{
+		form2textboxhwnd = AddTextbox(form2hwnd, _T("Info here"), 50, 20, 200, 400, false, true, true);
+		if (form2textboxhwnd)
+		{
+			AddFormEvent(form2hwnd, FORMEVENT_MINIMIZED, &form2minimized);
+			AddFormEvent(form2hwnd, FORMEVENT_MAXIMIZED, &form2maximized);
+			AddFormEvent(form2hwnd, FORMEVENT_RESIZE, &form2resized);
+			form2btnhwnd = AddButton(form2hwnd, _T("Toggle size"), 50, 450, 70, 30);
+			if (form2btnhwnd)
+			{
+				AddButtonEvent(form2btnhwnd, BUTTONEVENT_LCLICK, &onclickform2btn);
+			}
+		}
 
+
+	}
+	Engage();
 }
 
