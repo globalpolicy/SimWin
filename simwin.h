@@ -121,6 +121,32 @@ CheckboxStatesEnum GetCheckboxState(HWND checkboxHwnd);
 void SetCheckboxState(HWND checkboxHwnd, CheckboxStatesEnum state);
 #pragma endregion
 
+#pragma region Menu Declarations
+#define MAX_MENUITEMS 50
+int menuItemsCount = 0;
+typedef enum
+{
+	MENUITEMEVENT_CLICK
+} MenuItemEventsEnum;
+typedef struct
+{
+	void(*event_proc) ();
+} MenuItemEvent;
+typedef struct
+{
+	int MenuItemId;
+	MenuItemEvent CLICK;
+} MenuItem;
+MenuItem MenuItems[MAX_MENUITEMS];
+HMENU AddMainPopupMenu(HWND parentFormhwnd, const TCHAR *menuText);
+HMENU AddPopupMenu(HMENU hParentMenu, const TCHAR *menuText);
+int AddFinalMenuItem(HMENU hParentMenu, const TCHAR *menuText);
+int AddMainMenuItem(HWND parentFormhwnd, const TCHAR *menuText);
+bool IsMenuItemChecked(HWND parentFormhwnd, int menuItemID);
+void SetMenuItemCheckStatus(HWND parentFormhwnd, int menuItemID, bool checked);
+bool AddMenuItemEvent(int menuItemID, MenuItemEventsEnum menuItemEvent, void(*Procedure) ());
+#pragma endregion
+
 
 #pragma region Miscellaneous Declarations
 bool SetNiceFont(HWND hwnd);
@@ -168,6 +194,17 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 					if (form.MAXIMIZED.event_proc)
 						(*form.MAXIMIZED.event_proc) ();
 				}
+			}
+		}
+		break;
+	case WM_COMMAND:
+		for (int i = 0; i < menuItemsCount; i++)
+		{
+			MenuItem menuitem = MenuItems[i];
+			if (menuitem.MenuItemId == LOWORD(wParam))
+			{
+				if (menuitem.CLICK.event_proc)
+					(*menuitem.CLICK.event_proc) ();
 			}
 		}
 		break;
@@ -515,6 +552,79 @@ void SetCheckboxState(HWND checkboxHwnd, CheckboxStatesEnum state)
 	case CHECKBOXSTATE_INDETERMINATE:
 		SendMessage(checkboxHwnd, BM_SETCHECK, BST_INDETERMINATE, NULL);
 		break;
+	}
+}
+#pragma endregion
+
+#pragma region Definitions related to Menus
+/* Adds/creates a root branching/popup menu much like the standard "File" menu to a given form hwnd and returns its handle */
+HMENU AddMainPopupMenu(HWND parentFormhwnd, const TCHAR *menuText)
+{
+	HMENU hMenu = (GetMenu(parentFormhwnd)) ? (GetMenu(parentFormhwnd)) : (CreateMenu());	// a window will have only one menu, so either retrieve it, or create one if non-existent
+	HMENU hSubMenu = CreatePopupMenu();
+	AppendMenu(hMenu, MF_STRING | MF_POPUP, (UINT)hSubMenu, menuText);
+	SetMenu(parentFormhwnd, hMenu);
+	return hSubMenu;
+}
+/* Adds an intermediate branching/popup menu, like the "Open" menu of the File->Open->... menu structure and returns its handle */
+HMENU AddPopupMenu(HMENU hParentMenu, const TCHAR *menuText)
+{
+	HMENU hSubMenu = CreatePopupMenu();
+	AppendMenu(hParentMenu, MF_STRING | MF_POPUP, (UINT)hSubMenu, menuText);
+	return hSubMenu;
+}
+/* Adds a clickable/actionable menu item to a parent popup menu, like the "Project" of File->New->Project menu structure and returns its unique ID */
+// a "menu item" is the last endpoint of a menu route; it can produce WM_COMMAND message when clicked
+int AddFinalMenuItem(HMENU hParentMenu, const TCHAR *menuText)
+{
+	AppendMenu(hParentMenu, MF_STRING, menuItemsCount, menuText);
+	MenuItems[menuItemsCount] = { menuItemsCount, NULL };
+	menuItemsCount++;
+	return (menuItemsCount - 1);
+}
+/* Adds/creates a clickable/actionable menu item directly on a given form hwnd, like maybe a "Exit" menu upon clicking which, the app exits */
+// a "menu item" is the last endpoint of a menu route; it can produce WM_COMMAND message when clicked
+int AddMainMenuItem(HWND parentFormhwnd, const TCHAR *menuText)
+{
+	HMENU hMenu = (GetMenu(parentFormhwnd)) ? (GetMenu(parentFormhwnd)) : (CreateMenu());	// a window will have only one menu, so either retrieve it, or create one if non-existent
+	AppendMenu(hMenu, MF_STRING, menuItemsCount, menuText);
+	MenuItems[menuItemsCount] = { menuItemsCount, NULL };
+	menuItemsCount++;
+	SetMenu(parentFormhwnd, hMenu);
+	return (menuItemsCount - 1);
+}
+bool IsMenuItemChecked(HWND parentFormhwnd, int menuItemID)
+{
+	MENUITEMINFO *menuiteminfo = (MENUITEMINFO*)malloc(sizeof(MENUITEMINFO));
+	menuiteminfo->cbSize = sizeof(MENUITEMINFO);
+	menuiteminfo->fMask = MIIM_STATE;
+	if (GetMenuItemInfo(GetMenu(parentFormhwnd), menuItemID, false, menuiteminfo))
+	{
+		if (menuiteminfo->fState == MFS_CHECKED)
+			return true;
+		else if (menuiteminfo->fState == MFS_UNCHECKED)
+			return false;
+	}
+	return false;
+}
+void SetMenuItemCheckStatus(HWND parentFormhwnd, int menuItemID, bool checked)
+{
+	CheckMenuItem(GetMenu(parentFormhwnd), menuItemID, MF_BYCOMMAND | (checked)?(MF_CHECKED):(MF_UNCHECKED));
+}
+bool AddMenuItemEvent(int menuItemID, MenuItemEventsEnum menuItemEvent, void(*Procedure) ())
+{
+	for (int i = 0; i<menuItemsCount; i++)
+	{
+		MenuItem menuitem = MenuItems[i];
+		if (menuItemID == menuitem.MenuItemId)
+		{
+			switch (menuItemEvent)
+			{
+			case MENUITEMEVENT_CLICK:
+				MenuItems[i].CLICK.event_proc = Procedure;
+				return true;
+			}
+		}
 	}
 }
 #pragma endregion
