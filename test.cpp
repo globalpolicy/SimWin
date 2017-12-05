@@ -14,6 +14,7 @@ HWND btntogglecheckhwnd = nullptr;
 HWND form2hwnd = nullptr;
 HWND form2btnhwnd = nullptr;
 HWND form2textboxhwnd = nullptr;
+int finalmenuNewTextfileID, finalmenuNewCfileID, finalmenuOpenThisID, finalmenuOpenThatID, mainmenuAboutID;
 
 void checkandmsg()
 {
@@ -73,6 +74,21 @@ void onclickform2btn()
 
 }
 
+void form2menunewCsourceclicked()
+{
+	SetMenuItemCheckStatus(form2hwnd, finalmenuNewCfileID, !IsMenuItemChecked(form2hwnd, finalmenuNewCfileID));
+}
+
+void form2aboutmenuclicked()
+{
+	MessageBox(0, _T("About was clicked."), _T("About"), 0);
+}
+
+void form1helpmenuclicked()
+{
+	MessageBox(0, _T("Test the features alongside the source!"), _T("Help"), 0);
+}
+
 int CALLBACK WinMain(
 	_In_ HINSTANCE hInstance,
 	_In_ HINSTANCE hPrevInstance,
@@ -98,6 +114,11 @@ int CALLBACK WinMain(
 		if (btntogglecheckhwnd) {
 			AddButtonEvent(btntogglecheckhwnd, BUTTONEVENT_LCLICK, &togglechecked);
 		}
+		HMENU mainpopupmenuFile = AddMainPopupMenu(formhwnd, _T("File"));
+		HMENU popupmenufileOpen = AddPopupMenu(mainpopupmenuFile, _T("Open"));
+		int finalmenuThisID = AddFinalMenuItem(popupmenufileOpen, _T("Now"));
+		int mainmenuAboutID = AddMainMenuItem(formhwnd, _T("Help"));
+		AddMenuItemEvent(mainmenuAboutID, MENUITEMEVENT_CLICK, &form1helpmenuclicked);
 	}
 	form2hwnd = CreateForm(_T("Another title"), _T("SimwinForm2"), 500, 550);
 	if (form2hwnd)
@@ -114,8 +135,20 @@ int CALLBACK WinMain(
 				AddButtonEvent(form2btnhwnd, BUTTONEVENT_LCLICK, &onclickform2btn);
 			}
 		}
-
-
+		HMENU mainpopupmenuFile = AddMainPopupMenu(form2hwnd, _T("File"));
+		HMENU popupmenufileOpen = AddPopupMenu(mainpopupmenuFile, _T("Open"));
+		HMENU popupmenufileNew = AddPopupMenu(mainpopupmenuFile, _T("New"));
+		finalmenuNewTextfileID = AddFinalMenuItem(popupmenufileNew, _T("Text file"));
+		finalmenuNewCfileID = AddFinalMenuItem(popupmenufileNew, _T("C source file"));
+		HMENU popupmenufileOpenThis = AddPopupMenu(popupmenufileOpen, _T("This"));
+		finalmenuOpenThisID = AddFinalMenuItem(popupmenufileOpenThis, _T("Now what?"));
+		finalmenuOpenThatID = AddFinalMenuItem(popupmenufileOpen, _T("That"));
+		SetMenuItemCheckStatus(form2hwnd, finalmenuNewCfileID, true);
+		mainmenuAboutID = AddMainMenuItem(form2hwnd, _T("About"));
+		bool statusfinalmenuNewCfile =  IsMenuItemChecked(form2hwnd, finalmenuNewCfileID);
+		bool statusfinalmenuOpenThat = IsMenuItemChecked(form2hwnd, finalmenuOpenThatID);
+		AddMenuItemEvent(finalmenuNewCfileID, MENUITEMEVENT_CLICK, &form2menunewCsourceclicked);
+		AddMenuItemEvent(mainmenuAboutID, MENUITEMEVENT_CLICK, &form2aboutmenuclicked);
 	}
 	Engage();
 }
