@@ -15,6 +15,10 @@ HWND form2hwnd = nullptr;
 HWND form2btnhwnd = nullptr;
 HWND form2textboxhwnd = nullptr;
 int finalmenuNewTextfileID, finalmenuNewCfileID, finalmenuOpenThisID, finalmenuOpenThatID, mainmenuAboutID;
+HWND form2btnmintotray = nullptr;
+int trayicon2,trayicon1;
+HWND form2btnhideballoonnotif = nullptr;
+int trayicon2popupmenushowthat;
 
 void checkandmsg()
 {
@@ -89,6 +93,60 @@ void form1helpmenuclicked()
 	MessageBox(0, _T("Test the features alongside the source!"), _T("Help"), 0);
 }
 
+void trayicon1lclick()
+{
+	HideTrayIcon(trayicon1);
+	ShowWindow(formhwnd, SW_NORMAL);
+}
+
+void trayicon1rclick()
+{
+	ShowTrayIconPopupMenu(trayicon1);
+}
+
+void trayicon2dblclick()
+{
+	MessageBox(0, _T("Double clicked trayicon 2"), _T("Trayicon 2"), 0);
+}
+
+void trayshowthisclicked()
+{
+	MessageBox(0, _T("Show this"), _T("Trayicon 2"), 0);
+}
+
+void trayaboutclicked()
+{
+	MessageBox(0, _T("About this program."), _T("Trayicon 2"), 0);
+}
+
+void showtrayiconpopupmenu()
+{
+	ShowTrayIconPopupMenu(trayicon2);
+}
+
+void minimizetotraybtnclicked()
+{
+	ShowWindow(formhwnd, SW_HIDE);
+	ShowTrayIcon(trayicon1);
+	ShowTrayIcon(trayicon2);
+	ShowBalloonMessage(trayicon2, _T("Tray Icon 2"), _T("This is tray icon number 2"), TRAYICONBALLOONTYPE_INFO, true);
+}
+
+void hideballoonnotifbtnclicked()
+{
+	HideBalloonMessage(trayicon2);
+}
+
+void trayshowthatclicked()
+{
+	SetTrayIconPopupMenuItemCheckStatus(trayicon2popupmenushowthat, !(IsTrayIconPopupMenuItemChecked(trayicon2popupmenushowthat)));
+}
+
+void trayexitclicked()
+{
+	PostQuitMessage(ERROR_SUCCESS);
+}
+
 int CALLBACK WinMain(
 	_In_ HINSTANCE hInstance,
 	_In_ HINSTANCE hPrevInstance,
@@ -149,6 +207,31 @@ int CALLBACK WinMain(
 		bool statusfinalmenuOpenThat = IsMenuItemChecked(form2hwnd, finalmenuOpenThatID);
 		AddMenuItemEvent(finalmenuNewCfileID, MENUITEMEVENT_CLICK, &form2menunewCsourceclicked);
 		AddMenuItemEvent(mainmenuAboutID, MENUITEMEVENT_CLICK, &form2aboutmenuclicked);
+		form2btnmintotray = AddButton(form2hwnd, _T("To tray"), 50, 500, 70, 30);
+		if (form2btnmintotray)
+		{
+			trayicon1 = CreateTrayIcon(formhwnd, _T("Tooltip 1"));
+			AddTrayIconEvent(trayicon1, TRAYICONEVENT_LCLICK, &trayicon1lclick);
+			HMENU trayicon1popupmenu = CreateTrayIconMainPopupMenu(trayicon1);
+			int trayicon1popupmenuexit = AddTrayIconPopupMenuItem(trayicon1popupmenu, _T("Exit"));
+			AddTrayIconPopupMenuItemEvent(trayicon1popupmenuexit, TRAYICONMENUITEMEVENT_CLICK, &trayexitclicked);
+			AddTrayIconEvent(trayicon1, TRAYICONEVENT_RCLICK, &trayicon1rclick);
+			trayicon2 = CreateTrayIcon(form2hwnd, _T("Tooltip 2"));
+			AddTrayIconEvent(trayicon2, TRAYICONEVENT_DBLCLICK, &trayicon2dblclick);
+			HMENU trayicon2popupmenu = CreateTrayIconMainPopupMenu(trayicon2);
+			HMENU trayicon2popupmenushow = AddTrayIconPopupMenu(trayicon2popupmenu, _T("Show"));
+			int trayicon2popupmenushowthis = AddTrayIconPopupMenuItem(trayicon2popupmenushow, _T("This"));
+			trayicon2popupmenushowthat = AddTrayIconPopupMenuItem(trayicon2popupmenushow, _T("That"));
+			int trayicon2popupmenuabout = AddTrayIconPopupMenuItem(trayicon2popupmenu, _T("About"));
+			SetTrayIconPopupMenuItemCheckStatus(trayicon2popupmenushowthat, true);
+			AddTrayIconPopupMenuItemEvent(trayicon2popupmenushowthat, TRAYICONMENUITEMEVENT_CLICK, &trayshowthatclicked);
+			AddTrayIconPopupMenuItemEvent(trayicon2popupmenushowthis, TRAYICONMENUITEMEVENT_CLICK, &trayshowthisclicked);
+			AddTrayIconPopupMenuItemEvent(trayicon2popupmenuabout, TRAYICONMENUITEMEVENT_CLICK, &trayaboutclicked);
+			AddTrayIconEvent(trayicon2, TRAYICONEVENT_RCLICK, &showtrayiconpopupmenu);
+			AddButtonEvent(form2btnmintotray, BUTTONEVENT_LCLICK, &minimizetotraybtnclicked);
+		}
+		form2btnhideballoonnotif = AddButton(form2hwnd, _T("Hide balloon"), 150, 500, 80, 30);
+		AddButtonEvent(form2btnhideballoonnotif, BUTTONEVENT_LCLICK, &hideballoonnotifbtnclicked);
 	}
 	Engage();
 }
